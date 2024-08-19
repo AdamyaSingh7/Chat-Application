@@ -1,0 +1,280 @@
+“Contact.php”
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+<?php
+$servername = "localhost";
+$username = "root";
+$password = "";
+$database = "test";
+
+$conn = mysqli_connect('localhost','root','','siddhant');
+
+if (!$conn) {
+    echo "error in connecting";
+}
+else{
+    $userid_error = "";
+    $password_error = "";
+    
+    if($_SERVER["REQUEST_METHOD"] == "POST"){
+        $username = $_POST['username'];
+        $password = $_POST['password'];
+    
+        $hash_password = password_hash($password, PASSWORD_DEFAULT);
+    
+        $query = "select * from user where userid = '$username'";
+        $result = mysqli_query($conn,$query);
+        if (mysqli_num_rows($result) == 0) {
+            // Insert data into the database
+            header("location: index.php");
+        }
+        else{
+            $result = mysqli_fetch_array($result);
+            if (password_verify($password,$result['password'])) {
+                // Insert data into the database
+                echo "user found";
+            }
+            else{
+                header("location: index.php");
+            }
+        }
+    }
+    
+    mysqli_close($conn);
+}
+
+?>
+    <h1>WELCOME</h1>
+    <h2>SELECT THE USER YOU WANT TO MESSAGE</h2>
+    <form action="message.php" method = "GET">
+    <?php
+    if($_SERVER["REQUEST_METHOD"] == "POST"){
+        $user = $_POST['username'];
+        echo "<input type='hidden' name='user1' value='$user'>";
+        $conn = mysqli_connect('localhost','root','','siddhant');
+        if (!$conn) {
+            echo "error in connecting";
+        }
+
+        else{
+            $query = "select userid from user where userid != '$user'";
+            $result = mysqli_query($conn,$query);
+            echo '<select id="user2" name="user2">';
+            while($row = mysqli_fetch_assoc($result)){
+                echo '<option value="' . $row['userid'] . '">' . $row['userid'] . '</option>';
+            }
+            echo '</select>';
+        }
+        mysqli_close($conn);
+    }
+    ?>
+    
+    <input type="submit" value = "submit">
+    </form>
+
+    
+    <button onclick = "redirectlogin()">BACK</button>
+</body>
+<script>
+
+function redirectlogin(){
+    window.location.href = "index.php";
+}
+</script>
+</html>
+
+“message.php”
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>WELCOME</h1>
+
+    <div id="messages">
+        <!-- load messages -->
+        <?php
+        if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['user1']) && isset($_GET['user2'])) {
+            $conn = mysqli_connect("localhost", "root", "", "siddhant");
+            $user1 = $_GET['user1'];
+            $user2 = $_GET['user2'];
+            if (!$conn) {
+                echo "connection not successful";
+            } else {
+                $query = "select * from messages where (user1 = '$user1' and user2 = '$user2') or (user1 = '$user2' and user2 = '$user1') order by dateofmessage";
+                $result = mysqli_query($conn, $query);
+
+                while ($row = mysqli_fetch_assoc($result)) {
+                    echo "<p>".$row['user1']." : ".$row['message']."</p>";
+                }
+            }
+
+            mysqli_close($conn);
+        }
+        ?>
+    </div>
+
+    <div id="inputmessage">
+        <form method="post" action="message.php">
+            <textarea name="message" id="message" cols="30" rows="10"><?php if (isset($_POST['message'])) echo $_POST['message']; ?></textarea>
+            <input type="hidden" name="user1" value="<?php echo $user1; ?>">
+            <input type="hidden" name="user2" value="<?php echo $user2; ?>">
+            <button type="submit">send</button>
+        </form>
+    </div>
+
+    <?php
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && !empty($_POST['message'])) {
+        $conn = mysqli_connect("localhost", "root", "", "siddhant");
+        $message = $_POST['message'];
+        $user1 = $_POST['user1'];
+        $user2 = $_POST['user2'];
+
+        $query = "INSERT INTO messages VALUES ('$user1', '$user2', '$message', NOW())";
+        mysqli_query($conn, $query);
+
+        // Redirect to refresh the page and show updated messages
+        header("Location: message.php?user1=$user1&user2=$user2");
+        exit();
+    }
+    ?>
+
+    <script>
+        setTimeout(function(){
+            // Check if the message input is empty before refreshing the page
+            if (document.getElementById('message').value.trim() === "") {
+                window.location.href = "message.php?user1=<?php echo $user1; ?>&user2=<?php echo $user2; ?>";
+            }
+        }, 5000); // Refresh the page after 5 seconds if the message input is empty
+        //this is a test
+</script>
+</body>
+</html>
+
+“index.php”
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        div {
+            text-align: center;
+        }
+
+        
+        h1 {
+         font-family: 'Roboto', sans-serif;
+         font-size: 2em; 
+         font-weight: bold;
+         color: #ffffff; 
+         letter-spacing: 2px; 
+        }
+
+
+        form {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            animation: wobble 2s ease-in-out infinite;
+        }
+
+        @keyframes wobble {
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-3px); }
+            100% { transform: translateX(3px); }
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        input[type="submit"] {
+            background-color: #3498db;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #2980b9;
+        }
+
+        button {
+            background-color: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>LOGIN</h1>
+        <form action="contact.php" method="POST" id="loginForm">
+            <label for="username">USERID:</label>
+            <input type="text" name="username" id="username" required>
+            <label for="password">PASSWORD:</label>
+            <input type="password" name="password" id="password" required>
+            <input type="submit" value="Submit">
+        </form><BR>
+
+        <button onclick="register()">REGISTER</button>
+    </div>
+
+    <script>
+        function register() {
+            window.location.href = "register.php";
+        }
+
+        document.getElementById("loginForm").addEventListener("submit", function (event) {
+            
+        });
+    </script>
+</body>
+</html>
